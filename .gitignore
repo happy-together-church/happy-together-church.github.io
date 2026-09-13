@@ -1,0 +1,19 @@
+# 원본 자료 / 문서
+*.docx
+*.pptx
+*.pdf
+*.key
+*.pages
+
+# 시스템 파일
+.DS_Store
+*.DS_Store
+
+# 클로드 설정
+.claude/
+
+# Netlify
+.netlify/
+
+# 의존성 (혹시 생길 경우)
+node_modules/

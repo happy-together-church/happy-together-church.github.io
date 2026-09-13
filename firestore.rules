@@ -1,0 +1,28 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 관리자 판별 — 아래 이메일을 firebase-config.js 의 ADMIN_EMAIL 과 동일하게 바꾸세요.
+    function isAdmin() {
+      return request.auth != null
+          && request.auth.token.email == "여기에-관리자-구글이메일@gmail.com";
+    }
+
+    // ── 게시글 (주일설교 / 주보 / 목회칼럼 / 교회소식) ──────────
+    // 누구나 읽기, 관리자만 등록·수정·삭제
+    match /posts/{doc} {
+      allow read:  if true;
+      allow write: if isAdmin();
+    }
+
+    // ── 문의사항 (중보기도 요청 / 신앙 상담 / 기부금 영수증) ────
+    // 누구나 작성 가능. 목록 조회(list)는 관리자만 —
+    // 문의한 본인은 발급받은 '조회번호(문서 ID)'로 자신의 문의 1건만 확인(get) 가능.
+    match /inquiries/{doc} {
+      allow create:        if true;
+      allow get:           if true;             // 조회번호를 아는 본인 확인용 (ID는 추측 불가)
+      allow list:          if isAdmin();         // 전체 목록은 관리자만
+      allow update, delete: if isAdmin();
+    }
+  }
+}

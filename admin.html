@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>더불어행복한교회 · 관리자</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32.png" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    body { background: var(--bg-warm); }
+
+    /* 로그인 화면 */
+    .login-screen { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
+    .login-card { background: var(--surface); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); padding: 44px 40px; text-align: center; max-width: 400px; width: 100%; }
+    .login-card img.logo { height: 44px; margin: 0 auto 20px; }
+    .login-card h1 { font-size: 22px; margin-bottom: 8px; }
+    .login-card p { color: var(--ink-soft); font-size: 15px; margin-bottom: 28px; }
+    .btn-google { display: inline-flex; align-items: center; gap: 10px; width: 100%; justify-content: center;
+      padding: 14px; border-radius: 999px; border: 1.5px solid var(--line); background: #fff; font-size: 16px; font-weight: 700; color: var(--ink); }
+    .btn-google:hover { border-color: var(--blue); }
+    .btn-google svg { width: 20px; height: 20px; }
+    .login-err { color: var(--red); font-size: 14px; margin-top: 16px; }
+
+    /* 관리자 셸 */
+    .admin-shell { display: none; }
+    .admin-header { background: var(--surface); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 50; }
+    .admin-header-inner { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; }
+    .admin-header img { height: 34px; }
+    .admin-user { display: flex; align-items: center; gap: 12px; font-size: 14px; color: var(--ink-soft); }
+    .admin-user .au-photo { width: 32px; height: 32px; border-radius: 50%; background: var(--line); }
+    .btn-logout { padding: 8px 16px; border-radius: 999px; border: 1.5px solid var(--line); background: #fff; font-size: 13.5px; font-weight: 600; color: var(--ink-soft); }
+    .btn-logout:hover { border-color: var(--red); color: var(--red); }
+
+    .admin-tabs { display: flex; gap: 6px; padding: 16px 0 0; }
+    .admin-tab { padding: 12px 24px; border: none; background: none; font-size: 16px; font-weight: 700; color: var(--ink-faint); border-bottom: 3px solid transparent; }
+    .admin-tab.active { color: var(--blue); border-bottom-color: var(--blue); }
+    .admin-tab .badge { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: var(--red); color: #fff; font-size: 12px; font-weight: 700; margin-left: 6px; vertical-align: middle; }
+    .admin-tab .badge.zero { display: none; }
+
+    .panel { display: none; padding: 32px 0 80px; }
+    .panel.active { display: block; }
+
+    .admin-card { background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius); box-shadow: var(--shadow-sm); padding: 26px; margin-bottom: 22px; }
+    .admin-card h2 { font-size: 19px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+    .admin-card h2 .pill { font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: var(--orange-soft); color: var(--orange-dark); }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .cat-radios { display: flex; flex-wrap: wrap; gap: 8px; }
+
+    /* 게시글 리스트 */
+    .row-item { display: flex; align-items: center; gap: 16px; padding: 16px; border: 1px solid var(--line-soft); border-radius: var(--radius-sm); margin-bottom: 12px; }
+    .row-thumb { width: 64px; height: 48px; border-radius: 8px; object-fit: cover; background: var(--bg-warm); flex: none; }
+    .row-main { flex: 1; min-width: 0; }
+    .row-main .rm-title { font-weight: 700; font-size: 15.5px; }
+    .row-main .rm-meta { font-size: 13px; color: var(--ink-faint); margin-top: 2px; }
+    .row-actions { display: flex; gap: 8px; flex: none; }
+    .mini-btn { padding: 7px 14px; border-radius: 8px; border: 1.5px solid var(--line); background: #fff; font-size: 13.5px; font-weight: 600; color: var(--ink-soft); }
+    .mini-btn:hover { border-color: var(--blue); color: var(--blue); }
+    .mini-btn.danger:hover { border-color: var(--red); color: var(--red); }
+
+    /* 문의 카드 */
+    .inq-filters { display: flex; gap: 8px; margin-bottom: 18px; }
+    .inq-card { border: 1px solid var(--line-soft); border-radius: var(--radius-sm); padding: 20px; margin-bottom: 14px; }
+    .inq-card.answered { opacity: .72; }
+    .inq-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+    .inq-badges { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .inq-type { font-size: 12.5px; font-weight: 700; padding: 4px 12px; border-radius: 999px; background: var(--blue-soft); color: var(--blue-dark); }
+    .inq-status { font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 999px; }
+    .st-received { background: var(--orange-soft); color: var(--orange-dark); }
+    .st-answered { background: var(--teal-soft); color: var(--teal-dark); }
+    .inq-date { font-size: 12.5px; color: var(--ink-faint); }
+    .inq-who { font-size: 14.5px; margin-bottom: 4px; }
+    .inq-who b { color: var(--ink); }
+    .inq-contact { font-size: 14px; color: var(--blue-dark); font-weight: 600; margin-bottom: 12px; }
+    .inq-message { background: var(--bg); border-radius: 10px; padding: 14px 16px; font-size: 14.8px; color: var(--ink); white-space: pre-wrap; line-height: 1.7; margin-bottom: 14px; }
+    .inq-ref { font-size: 12px; color: var(--ink-faint); font-family: ui-monospace, monospace; margin-bottom: 12px; }
+    .inq-reply-box textarea { width: 100%; font-family: inherit; font-size: 14.5px; border: 1.5px solid var(--line); border-radius: 10px; padding: 12px; min-height: 80px; resize: vertical; }
+    .inq-reply-box textarea:focus { outline: none; border-color: var(--teal); box-shadow: 0 0 0 3px var(--teal-soft); }
+    .inq-reply-actions { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+
+    .loading, .empty { text-align: center; color: var(--ink-faint); padding: 40px; }
+
+    @media (max-width: 640px) {
+      .grid-2 { grid-template-columns: 1fr; }
+      .row-item { flex-wrap: wrap; }
+      .row-actions { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ══════════ 로그인 화면 ══════════ -->
+  <div class="login-screen" id="loginScreen">
+    <div class="login-card">
+      <img src="images/logo.jpeg" class="logo" alt="더불어행복한교회" />
+      <h1>관리자 로그인</h1>
+      <p>등록된 관리자 구글 계정으로 로그인해 주세요.</p>
+      <button class="btn-google" id="loginBtn">
+        <svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+        Google로 로그인
+      </button>
+      <p class="login-err" id="loginErr" hidden></p>
+      <p style="margin-top:22px;"><a href="index.html" style="color:var(--ink-faint); font-size:13.5px;">← 홈페이지로 돌아가기</a></p>
+    </div>
+  </div>
+
+  <!-- ══════════ 관리자 셸 ══════════ -->
+  <div class="admin-shell" id="adminShell">
+    <header class="admin-header">
+      <div class="wrap admin-header-inner">
+        <img src="images/logo.jpeg" alt="더불어행복한교회 관리자" />
+        <div class="admin-user">
+          <img class="au-photo" id="auPhoto" alt="" />
+          <span id="auName"></span>
+          <button class="btn-logout" id="logoutBtn">로그아웃</button>
+        </div>
+      </div>
+      <div class="wrap">
+        <div class="admin-tabs">
+          <button class="admin-tab active" data-panel="posts">게시글 관리</button>
+          <button class="admin-tab" data-panel="inquiries">문의 관리 <span class="badge zero" id="newInqBadge">0</span></button>
+        </div>
+      </div>
+    </header>
+
+    <!-- ── 게시글 관리 ── -->
+    <div class="panel active wrap" id="panel-posts">
+      <div class="admin-card">
+        <h2 id="postFormTitle">새 게시글 등록</h2>
+        <form id="postForm">
+          <input type="hidden" id="postId" />
+          <div class="field">
+            <label>분류 <span class="req">*</span></label>
+            <div class="cat-radios">
+              <label class="type-chip"><input type="radio" name="pcat" value="sermon" checked /><span>주일설교</span></label>
+              <label class="type-chip"><input type="radio" name="pcat" value="bulletin" /><span>주보</span></label>
+              <label class="type-chip"><input type="radio" name="pcat" value="column" /><span>목회칼럼</span></label>
+              <label class="type-chip"><input type="radio" name="pcat" value="news" /><span>교회소식</span></label>
+            </div>
+          </div>
+          <div class="grid-2">
+            <div class="field">
+              <label for="pTitle">제목 <span class="req">*</span></label>
+              <input type="text" id="pTitle" placeholder="예) 함께 걷는 은혜의 길" required />
+            </div>
+            <div class="field">
+              <label for="pDate">날짜 <span class="req">*</span></label>
+              <input type="date" id="pDate" required />
+            </div>
+          </div>
+          <div class="field">
+            <label for="pBody">내용 / 요약</label>
+            <textarea id="pBody" placeholder="설교 요약, 소식 내용 등을 적어 주세요."></textarea>
+          </div>
+          <div class="grid-2">
+            <div class="field">
+              <label for="pLink">영상/외부 링크 (선택)</label>
+              <input type="url" id="pLink" placeholder="예) 유튜브 설교 영상 주소" />
+            </div>
+            <div class="field">
+              <label for="pFile">첨부 파일 · 주보 이미지/PDF (선택)</label>
+              <input type="file" id="pFile" accept="image/*,application/pdf" />
+            </div>
+          </div>
+          <div class="field">
+            <label for="pImage">대표 이미지 (선택)</label>
+            <input type="file" id="pImage" accept="image/*" />
+            <p style="font-size:12.5px; color:var(--ink-faint); margin-top:6px;" id="pImageHint">목록 카드에 표시될 사진이에요. 없으면 교회 엠블럼이 표시됩니다.</p>
+          </div>
+          <div style="display:flex; gap:10px;">
+            <button type="submit" class="btn btn-primary" id="postSubmit">게시글 등록</button>
+            <button type="button" class="btn btn-ghost" id="postCancel" hidden>취소</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="admin-card">
+        <h2>등록된 게시글 <span class="pill" id="postCount">0</span></h2>
+        <div id="postList"><p class="loading">불러오는 중…</p></div>
+      </div>
+    </div>
+
+    <!-- ── 문의 관리 ── -->
+    <div class="panel wrap" id="panel-inquiries">
+      <div class="admin-card">
+        <h2>문의사항</h2>
+        <div class="inq-filters">
+          <button class="filter-tab active" data-inq="all">전체</button>
+          <button class="filter-tab" data-inq="received">확인 대기</button>
+          <button class="filter-tab" data-inq="answered">답변 완료</button>
+        </div>
+        <div id="inqList"><p class="loading">불러오는 중…</p></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
+  <script src="firebase-config.js"></script>
+  <script src="admin.js"></script>
+</body>
+</html>
