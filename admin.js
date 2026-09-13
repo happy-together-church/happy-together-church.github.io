@@ -78,7 +78,8 @@ if (!configReady) {
       adminShell.style.display = 'none';
       return;
     }
-    if (user.email !== ADMIN_EMAIL) {
+    const admins = (typeof ADMIN_EMAILS !== 'undefined') ? ADMIN_EMAILS : [];
+    if (!admins.includes(user.email)) {
       loginErr.hidden = false;
       loginErr.textContent = '관리자 권한이 없는 계정이에요. (' + user.email + ')';
       auth.signOut();

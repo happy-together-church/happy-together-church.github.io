@@ -35,13 +35,16 @@
 2. 화면에 나오는 `firebaseConfig` 값을 복사해서 **`firebase-config.js`** 의 `FIREBASE_CONFIG` 를 통째로 교체
    > 이 값들은 웹에 공개돼도 안전합니다. 실제 보안은 규칙(rules)이 담당해요.
 
-### 3단계 — 관리자 이메일 지정 (⭐가장 중요, 3곳 모두 동일하게)
-관리자로 쓸 **구글 계정 이메일**을 아래 3개 파일에 똑같이 넣어주세요.
-- `firebase-config.js` → `ADMIN_EMAIL`
-- `firestore.rules` → `isAdmin()` 안의 이메일
-- `storage.rules` → 이메일
+### 3단계 — 관리자 이메일 지정 (⭐가장 중요, 3곳 목록을 동일하게)
+관리자로 쓸 **구글 계정 이메일 목록**을 아래 3개 파일에 똑같이 유지하세요.
+현재 등록된 관리자: `iholyhands@gmail.com`, `sunlike.chloe@gmail.com`
+- `firebase-config.js` → `ADMIN_EMAILS` 배열
+- `firestore.rules` → `isAdmin()` 안의 이메일 목록
+- `storage.rules` → 이메일 목록
 
-> 이 계정으로 `admin.html` 에 로그인해야만 게시글/문의를 관리할 수 있어요.
+관리자를 추가/삭제하려면 위 3곳의 목록에 이메일을 함께 넣거나 빼면 됩니다.
+
+> 이 목록의 구글 계정으로 `admin.html` 에 로그인해야만 게시글/문의를 관리할 수 있어요.
 
 ### 4단계 — 보안 규칙 올리기
 가장 쉬운 방법(콘솔에 복사·붙여넣기):

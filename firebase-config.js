@@ -13,10 +13,13 @@ const FIREBASE_CONFIG = {
 };
 
 // ─── 관리자 구글 계정 ─────────────────────────────────────────
-// 이 구글 계정으로 로그인해야 admin.html 에서 게시글 등록·문의 관리를 할 수 있습니다.
-// 아래 이메일을 교회 대표(관리자) 구글 계정으로 바꾸고,
-// firestore.rules 안의 이메일도 똑같이 바꿔주세요.
-const ADMIN_EMAIL = "여기에-관리자-구글이메일@gmail.com";
+// 아래 목록에 있는 구글 계정으로 로그인해야 admin.html 에서
+// 게시글 등록·문의 관리를 할 수 있습니다.
+// (firestore.rules / storage.rules 의 이메일 목록도 동일하게 맞춰주세요.)
+const ADMIN_EMAILS = [
+  "iholyhands@gmail.com",
+  "sunlike.chloe@gmail.com"
+];
 
 // ─── (선택) 네이버 지도 API ───────────────────────────────────
 // 네이버 지도는 iframe 임베드가 막혀 있어, 실제 지도를 넣으려면

@@ -2,10 +2,13 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // 관리자 판별 — 아래 이메일을 firebase-config.js 의 ADMIN_EMAIL 과 동일하게 바꾸세요.
+    // 관리자 판별 — firebase-config.js 의 ADMIN_EMAILS 와 동일하게 유지하세요.
     function isAdmin() {
       return request.auth != null
-          && request.auth.token.email == "여기에-관리자-구글이메일@gmail.com";
+          && request.auth.token.email in [
+               "iholyhands@gmail.com",
+               "sunlike.chloe@gmail.com"
+             ];
     }
 
     // ── 게시글 (주일설교 / 주보 / 목회칼럼 / 교회소식) ──────────
