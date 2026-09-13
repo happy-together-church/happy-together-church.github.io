@@ -21,6 +21,21 @@ const ADMIN_EMAILS = [
   "sunlike.chloe@gmail.com"
 ];
 
+// ─── (선택) Google Analytics 4 — 방문 통계 ────────────────────
+// analytics.google.com 에서 GA4 속성 생성 → 측정 ID(G-XXXXXXXXXX)를 넣으세요.
+// 넣으면 일일 방문자 수 · 클릭 · 유입 경로가 자동 수집됩니다. (비우면 통계 미수집)
+window.GA4_MEASUREMENT_ID = "";
+
+// ─── (선택) 문의 알림 메일 — EmailJS ──────────────────────────
+// https://dashboard.emailjs.com 에서 무료 가입 후 아래 3개 값을 넣으세요.
+// 문의가 접수되면 NOTIFY_EMAIL 로 알림 메일이 발송됩니다. (비우면 메일 미발송)
+window.NOTIFY_EMAIL = "iholyhands@gmail.com";
+window.EMAILJS = {
+  serviceId:  "",   // 예: "service_xxxxxxx"
+  templateId: "",   // 예: "template_xxxxxxx"
+  publicKey:  ""    // 예: "xxxxxxxxxxxxxxxx"
+};
+
 // ─── (선택) 네이버 지도 API ───────────────────────────────────
 // 네이버 지도는 iframe 임베드가 막혀 있어, 실제 지도를 넣으려면
 // 네이버 클라우드 플랫폼(https://www.ncloud.com) → AI·NAVER API →

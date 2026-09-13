@@ -90,6 +90,45 @@ let db = null, auth = null;
   }
 })();
 
+/* ---------- Google Analytics 4 (방문 통계) ---------- */
+function gaEvent(name, params) { try { if (window.gtag) window.gtag('event', name, params || {}); } catch (e) {} }
+(function initGA() {
+  const id = window.GA4_MEASUREMENT_ID;
+  if (!id) return;
+  const s = document.createElement('script');
+  s.async = true; s.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(id);
+  document.head.appendChild(s);
+  window.dataLayer = window.dataLayer || [];
+  window.gtag = function () { window.dataLayer.push(arguments); };
+  window.gtag('js', new Date());
+  window.gtag('config', id);
+})();
+
+/* 주요 클릭 추적 — 방문자가 어떤 정보를 클릭하는지 */
+document.addEventListener('click', (e) => {
+  const t = e.target.closest('.nav-links a, .btn, .post-card, .yt-card, .type-chip, .filter-tab, a[href]');
+  if (!t) return;
+  const label = (t.getAttribute('aria-label') || t.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 60);
+  const sec = t.closest('section[id], header[id]');
+  let section = sec ? sec.id : 'other';
+  if (t.classList.contains('yt-card')) section = 'youtube_설교';
+  if (label) gaEvent('content_click', { link_text: label, section: section });
+});
+
+/* ---------- 문의 알림 메일 (EmailJS) ---------- */
+function sendInquiryEmail(d) {
+  try {
+    const cfg = window.EMAILJS || {};
+    if (!window.emailjs || !cfg.serviceId || !cfg.templateId || !cfg.publicKey) return;
+    window.emailjs.send(cfg.serviceId, cfg.templateId, {
+      to_email: window.NOTIFY_EMAIL || '',
+      inquiry_type: d.type, name: d.name, contact: d.contact,
+      message: d.message, ref_code: d.ref,
+      submitted_at: new Date().toLocaleString('ko-KR')
+    }, cfg.publicKey).catch((err) => console.warn('알림 메일 발송 실패:', err));
+  } catch (e) { console.warn(e); }
+}
+
 function renderConfigNeeded() { /* 시드 데이터로 대체 렌더링되므로 별도 처리 없음 */ }
 
 /* 게시글 조회용 인덱스 (모달에서 사용) */
@@ -275,6 +314,8 @@ document.addEventListener('keydown', (e) => {
         reply: '',
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
       });
+      sendInquiryEmail({ type, name, contact, message, ref: ref.id });
+      gaEvent('inquiry_submit', { inquiry_type: type });
       form.reset();
       if (refCode) refCode.textContent = ref.id;
       if (refBox) { refBox.hidden = false; refBox.scrollIntoView({ behavior: 'smooth', block: 'center' }); }

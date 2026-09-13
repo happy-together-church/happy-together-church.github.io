@@ -97,6 +97,31 @@ GitHub + Netlify(나그네방과 동일) 또는 Vercel 어디든 됩니다. 별�
 
 ---
 
+## 📊 방문 통계 (Google Analytics 4)
+
+1. https://analytics.google.com 에서 계정·속성 생성 → **웹 데이터 스트림** 추가
+2. 발급된 **측정 ID(`G-XXXXXXXXXX`)** 를 `firebase-config.js` 의 `window.GA4_MEASUREMENT_ID` 에 입력
+3. 배포하면 자동 수집됩니다:
+   - **일일 방문자 수** (보고서 > 실시간 / 획득)
+   - **주요 클릭** (`content_click` 이벤트 — 어떤 메뉴·버튼·글을 눌렀는지)
+   - **유입 경로** (보고서 > 획득 — 검색/직접/SNS/추천)
+4. 관리자 페이지 상단 **‘방문 통계 보기’** 버튼으로 GA 대시보드로 이동합니다.
+
+## ✉️ 문의 알림 메일 (EmailJS)
+
+문의가 접수되면 **iholyhands@gmail.com** 으로 알림 메일이 자동 발송됩니다.
+
+1. https://dashboard.emailjs.com 무료 가입
+2. **Email Service** 연결(예: Gmail) → `service_id` 확인
+3. **Email Template** 생성 → 아래 변수를 본문에 넣기:
+   `{{inquiry_type}}`, `{{name}}`, `{{contact}}`, `{{message}}`, `{{ref_code}}`, `{{submitted_at}}`
+   - 받는사람(To)에는 `{{to_email}}` 또는 직접 `iholyhands@gmail.com`
+4. **Account > General** 에서 `Public Key` 확인
+5. `firebase-config.js` 의 `window.EMAILJS` 에 `serviceId / templateId / publicKey` 입력,
+   받는 주소는 `window.NOTIFY_EMAIL` 로 조정 가능
+
+> 세 값이 비어 있으면 메일은 발송되지 않고, 문의는 사이트(어드민)에만 저장됩니다.
+
 ## 🎨 교회 브랜드 색상 (로고에서 추출)
 
 | 이름 | 색상값 |
