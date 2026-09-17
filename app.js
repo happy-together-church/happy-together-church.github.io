@@ -139,32 +139,28 @@ function getSeedPosts() { return Array.isArray(window.SEED_POSTS) ? window.SEED_
 function indexPosts(items) { items.forEach(x => { POSTS_INDEX[x.id] = x.d; }); }
 
 /* 게시글 로드: Firestore 우선, 비어있거나 미설정이면 시드(seed) 사용 */
-function loadPosts() {
-  return new Promise((resolve) => {
-    const seed = getSeedPosts().map(d => ({ id: d.id, d }));
-    if (!db) { resolve(seed); return; }
-    let done = false;
-    const finish = (v) => { if (!done) { done = true; resolve(v); } };
-    // 안전장치: 응답이 늦어도 기본 칼럼이라도 표시해 '불러오는 중' 멈춤 방지
-    setTimeout(() => finish(seed), 8000);
-    db.collection('posts').orderBy('createdAt', 'desc').get()
-      .then(snap => {
-        const fs = snap.docs.map(doc => ({ id: doc.id, d: doc.data() }));
-        // 관리자 등록 글(최신순) + 기본 칼럼을 함께 표시
-        finish(fs.concat(seed));
-      })
-      .catch(err => { console.error(err); finish(seed); });
-  });
+// 게시글 구독: 기본 칼럼을 즉시 표시하고, Firestore 글이 오면 합쳐서 갱신
+function subscribePosts(onData) {
+  const seed = getSeedPosts().map(d => ({ id: d.id, d }));
+  onData(seed); // 즉시 기본 칼럼 표시 (연결이 늦어도 화면이 비지 않음)
+  if (!db) return;
+  try {
+    db.collection('posts').orderBy('createdAt', 'desc').onSnapshot(
+      (snap) => onData(snap.docs.map(doc => ({ id: doc.id, d: doc.data() })).concat(seed)),
+      (err) => console.error('posts onSnapshot:', err && (err.code || err.message))
+    );
+  } catch (e) { console.error(e); }
 }
 
 /* ---------- 홈: 최근 게시글 3개 ---------- */
 (function homePosts() {
   const grid = document.getElementById('homePosts');
   if (!grid) return;
-  loadPosts().then(items => {
+  subscribePosts(items => {
     indexPosts(items);
-    if (!items.length) { grid.innerHTML = '<p class="empty-note">따뜻한 소식을 준비하고 있어요. 조금만 기다려 주세요.</p>'; return; }
-    grid.innerHTML = items.slice(0, 3).map(x => postCard(x.id, x.d)).join('');
+    grid.innerHTML = items.length
+      ? items.slice(0, 3).map(x => postCard(x.id, x.d)).join('')
+      : '<p class="empty-note">따뜻한 소식을 준비하고 있어요. 조금만 기다려 주세요.</p>';
   });
 })();
 
@@ -209,8 +205,7 @@ function postCard(id, d) {
     list.innerHTML = items.map(x => postCard(x.id, x.d)).join('');
   }
 
-  list.innerHTML = '<p class="empty-note">불러오는 중이에요…</p>';
-  loadPosts().then(items => { allItems = items; indexPosts(items); render(); });
+  subscribePosts(items => { allItems = items; indexPosts(items); render(); });
 })();
 
 /* ---------- 네이버 지도 (Client ID 있을 때만) ---------- */
