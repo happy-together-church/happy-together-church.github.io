@@ -139,11 +139,15 @@ function indexPosts(items) { items.forEach(x => { POSTS_INDEX[x.id] = x.d; }); }
 /* 게시글 로드: Firestore 우선, 비어있거나 미설정이면 시드(seed) 사용 */
 function loadPosts() {
   return new Promise((resolve) => {
-    const seed = () => getSeedPosts().map(d => ({ id: d.id, d }));
-    if (!db) { resolve(seed()); return; }
+    const seed = getSeedPosts().map(d => ({ id: d.id, d }));
+    if (!db) { resolve(seed); return; }
     db.collection('posts').orderBy('createdAt', 'desc').get()
-      .then(snap => resolve(snap.empty ? seed() : snap.docs.map(doc => ({ id: doc.id, d: doc.data() }))))
-      .catch(err => { console.error(err); resolve(seed()); });
+      .then(snap => {
+        const fs = snap.docs.map(doc => ({ id: doc.id, d: doc.data() }));
+        // 관리자 등록 글(최신순) + 기본 칼럼을 함께 표시
+        resolve(fs.concat(seed));
+      })
+      .catch(err => { console.error(err); resolve(seed); });
   });
 }
 
