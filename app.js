@@ -84,6 +84,8 @@ let db = null, auth = null;
   try {
     if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
     db = firebase.firestore();
+    // 일부 네트워크/브라우저에서 기본 연결이 멈추는 문제 방지 (long-polling 자동 감지)
+    try { db.settings({ experimentalAutoDetectLongPolling: true }); } catch (e) {}
     auth = firebase.auth();
   } catch (err) {
     console.error('Firebase 초기화 오류:', err);
@@ -141,13 +143,17 @@ function loadPosts() {
   return new Promise((resolve) => {
     const seed = getSeedPosts().map(d => ({ id: d.id, d }));
     if (!db) { resolve(seed); return; }
+    let done = false;
+    const finish = (v) => { if (!done) { done = true; resolve(v); } };
+    // 안전장치: 응답이 늦어도 기본 칼럼이라도 표시해 '불러오는 중' 멈춤 방지
+    setTimeout(() => finish(seed), 8000);
     db.collection('posts').orderBy('createdAt', 'desc').get()
       .then(snap => {
         const fs = snap.docs.map(doc => ({ id: doc.id, d: doc.data() }));
         // 관리자 등록 글(최신순) + 기본 칼럼을 함께 표시
-        resolve(fs.concat(seed));
+        finish(fs.concat(seed));
       })
-      .catch(err => { console.error(err); resolve(seed); });
+      .catch(err => { console.error(err); finish(seed); });
   });
 }
 
