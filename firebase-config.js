@@ -4,12 +4,13 @@
 // 3) 나오는 firebaseConfig 값으로 아래를 통째로 교체하세요.
 //    (이 값들은 웹에 공개되어도 안전합니다 — 보안은 firestore.rules 가 담당합니다.)
 const FIREBASE_CONFIG = {
-  apiKey:            "YOUR_API_KEY",
-  authDomain:        "YOUR_PROJECT.firebaseapp.com",
-  projectId:         "YOUR_PROJECT_ID",
-  storageBucket:     "YOUR_PROJECT.firebasestorage.app",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId:             "YOUR_APP_ID"
+  apiKey:            "AIzaSyC_zHbVrC2Hqvh5EOXlXko6ssFku82meJA",
+  authDomain:        "happy-together-church.firebaseapp.com",
+  projectId:         "happy-together-church",
+  storageBucket:     "happy-together-church.firebasestorage.app",
+  messagingSenderId: "385351672770",
+  appId:             "1:385351672770:web:f68ca76267a93a89abec5b",
+  measurementId:     "G-DN8NWTSCDQ"
 };
 
 // ─── 관리자 구글 계정 ─────────────────────────────────────────
@@ -24,7 +25,7 @@ const ADMIN_EMAILS = [
 // ─── (선택) Google Analytics 4 — 방문 통계 ────────────────────
 // analytics.google.com 에서 GA4 속성 생성 → 측정 ID(G-XXXXXXXXXX)를 넣으세요.
 // 넣으면 일일 방문자 수 · 클릭 · 유입 경로가 자동 수집됩니다. (비우면 통계 미수집)
-window.GA4_MEASUREMENT_ID = "";
+window.GA4_MEASUREMENT_ID = "G-DN8NWTSCDQ";
 
 // ─── (선택) 문의 알림 메일 — EmailJS ──────────────────────────
 // https://dashboard.emailjs.com 에서 무료 가입 후 아래 3개 값을 넣으세요.
