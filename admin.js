@@ -138,8 +138,10 @@ if (!configReady) {
     try {
       let imageUrl = editing.imageUrl || '';
       let fileUrl  = editing.fileUrl || '';
-      if (imgFile)  imageUrl = await uploadFile(imgFile, 'posts/images');
-      if (fileFile) fileUrl  = await uploadFile(fileFile, 'posts/files');
+      let uploadFailed = false;
+      // 이미지·첨부 업로드가 실패해도(예: Storage 미설정) 글 저장은 계속 진행
+      if (imgFile)  { try { imageUrl = await uploadFile(imgFile, 'posts/images'); } catch (e) { console.error('이미지 업로드 실패:', e); uploadFailed = true; } }
+      if (fileFile) { try { fileUrl  = await uploadFile(fileFile, 'posts/files'); } catch (e) { console.error('첨부 업로드 실패:', e); uploadFailed = true; } }
 
       const data = { category, title, date, body, link, imageUrl, fileUrl };
       if (id) {
@@ -150,10 +152,11 @@ if (!configReady) {
         await db.collection('posts').add(data);
         showToast('게시글이 등록되었어요.');
       }
+      if (uploadFailed) showToast('글은 저장됐지만 이미지 업로드에 실패했어요. (Storage 설정 필요)', true);
       resetPostForm();
     } catch (err) {
       console.error(err);
-      showToast('저장에 실패했어요. 잠시 후 다시 시도해 주세요.', true);
+      showToast('저장에 실패했어요: ' + (err.code || err.message), true);
     }
     postSubmit.disabled = false;
     postSubmit.textContent = id ? '수정 저장' : '게시글 등록';
