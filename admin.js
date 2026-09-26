@@ -53,6 +53,8 @@ if (!configReady) {
   if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
   auth = firebase.auth();
   db = firebase.firestore();
+  // 일부 네트워크/브라우저에서 저장(쓰기) 연결이 멈추는 문제 방지 (long-polling 강제)
+  try { db.settings({ experimentalForceLongPolling: true }); } catch (e) {}
   storage = firebase.storage();
 
   const googleProvider = new firebase.auth.GoogleAuthProvider();

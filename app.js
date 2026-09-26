@@ -84,8 +84,8 @@ let db = null, auth = null;
   try {
     if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
     db = firebase.firestore();
-    // 일부 네트워크/브라우저에서 기본 연결이 멈추는 문제 방지 (long-polling 자동 감지)
-    try { db.settings({ experimentalAutoDetectLongPolling: true }); } catch (e) {}
+    // 일부 네트워크/브라우저에서 기본 연결이 멈추는 문제 방지 (long-polling 강제)
+    try { db.settings({ experimentalForceLongPolling: true }); } catch (e) {}
     auth = firebase.auth();
   } catch (err) {
     console.error('Firebase 초기화 오류:', err);
