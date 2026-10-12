@@ -38,9 +38,9 @@ const CATEGORIES = {
   news:     { label: '교회소식', cls: 'cat-news' },
 };
 
-/* ---------- Firebase ---------- */
-let db, auth, storage;
-const configReady = typeof FIREBASE_CONFIG !== 'undefined' && FIREBASE_CONFIG.apiKey !== 'YOUR_API_KEY';
+/* ---------- Firebase (인증·Storage는 SDK, 데이터는 REST=window.FB) ---------- */
+let auth, storage;
+const configReady = typeof FIREBASE_CONFIG !== 'undefined' && FIREBASE_CONFIG.apiKey !== 'YOUR_API_KEY' && !!window.FB;
 
 if (!configReady) {
   window.addEventListener('DOMContentLoaded', () => {
@@ -52,13 +52,13 @@ if (!configReady) {
 } else {
   if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
   auth = firebase.auth();
-  db = firebase.firestore();
-  // 일부 네트워크/브라우저에서 저장(쓰기) 연결이 멈추는 문제 방지 (long-polling 강제)
-  try { db.settings({ experimentalForceLongPolling: true }); } catch (e) {}
-  storage = firebase.storage();
+  try { storage = firebase.storage(); } catch (e) { storage = null; }
 
   const googleProvider = new firebase.auth.GoogleAuthProvider();
   googleProvider.setCustomParameters({ prompt: 'select_account' });
+
+  // 현재 관리자 인증 토큰 (REST 쓰기에 사용)
+  async function authToken() { return auth.currentUser ? await auth.currentUser.getIdToken() : null; }
 
   const loginScreen = document.getElementById('loginScreen');
   const adminShell  = document.getElementById('adminShell');
@@ -93,8 +93,8 @@ if (!configReady) {
     document.getElementById('auName').textContent = user.displayName || user.email;
     const photo = document.getElementById('auPhoto');
     if (user.photoURL) photo.src = user.photoURL; else photo.style.visibility = 'hidden';
-    startPosts();
-    startInquiries();
+    loadPosts();
+    loadInquiries();
   });
 
   /* 탭 전환 */
@@ -144,16 +144,18 @@ if (!configReady) {
       if (fileFile) { try { fileUrl  = await uploadFile(fileFile, 'posts/files'); } catch (e) { console.error('첨부 업로드 실패:', e); uploadFailed = true; } }
 
       const data = { category, title, date, body, link, imageUrl, fileUrl };
+      const tk = await authToken();
       if (id) {
-        await db.collection('posts').doc(id).update(data);
+        await window.FB.update('posts', id, data, tk);
         showToast('게시글이 수정되었어요.');
       } else {
-        data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
-        await db.collection('posts').add(data);
+        data.createdAt = window.FB.nowISO();
+        await window.FB.create('posts', data, tk);
         showToast('게시글이 등록되었어요.');
       }
       if (uploadFailed) showToast('글은 저장됐지만 이미지 업로드에 실패했어요. (Storage 설정 필요)', true);
       resetPostForm();
+      loadPosts();
     } catch (err) {
       console.error(err);
       showToast('저장에 실패했어요: ' + (err.code || err.message), true);
@@ -174,38 +176,41 @@ if (!configReady) {
     document.querySelector('input[name="pcat"][value="sermon"]').checked = true;
   }
 
+  let postsCache = {}; // id → data (수정용)
+
   window.__editPost = function (id) {
-    db.collection('posts').doc(id).get().then(doc => {
-      if (!doc.exists) return;
-      const d = doc.data();
-      document.getElementById('postId').value = id;
-      document.getElementById('pTitle').value = d.title || '';
-      document.getElementById('pDate').value = d.date || '';
-      document.getElementById('pBody').value = d.body || '';
-      document.getElementById('pLink').value = d.link || '';
-      const radio = document.querySelector(`input[name="pcat"][value="${d.category}"]`);
-      if (radio) radio.checked = true;
-      editing = { imageUrl: d.imageUrl || '', fileUrl: d.fileUrl || '' };
-      postCancel.hidden = false;
-      postSubmit.textContent = '수정 저장';
-      postFormTitle.textContent = '게시글 수정';
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    });
+    const d = postsCache[id];
+    if (!d) return;
+    document.getElementById('postId').value = id;
+    document.getElementById('pTitle').value = d.title || '';
+    document.getElementById('pDate').value = d.date || '';
+    document.getElementById('pBody').value = d.body || '';
+    document.getElementById('pLink').value = d.link || '';
+    const radio = document.querySelector(`input[name="pcat"][value="${d.category}"]`);
+    if (radio) radio.checked = true;
+    editing = { imageUrl: d.imageUrl || '', fileUrl: d.fileUrl || '' };
+    postCancel.hidden = false;
+    postSubmit.textContent = '수정 저장';
+    postFormTitle.textContent = '게시글 수정';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  window.__deletePost = function (id) {
+  window.__deletePost = async function (id) {
     if (!confirm('이 게시글을 삭제할까요? 되돌릴 수 없어요.')) return;
-    db.collection('posts').doc(id).delete()
-      .then(() => showToast('게시글을 삭제했어요.'))
-      .catch(() => showToast('삭제에 실패했어요.', true));
+    try { await window.FB.remove('posts', id, await authToken()); showToast('게시글을 삭제했어요.'); loadPosts(); }
+    catch (e) { showToast('삭제에 실패했어요: ' + e.message, true); }
   };
 
-  function startPosts() {
-    db.collection('posts').orderBy('createdAt', 'desc').onSnapshot(snap => {
-      document.getElementById('postCount').textContent = snap.size;
-      if (snap.empty) { postList.innerHTML = '<p class="empty">아직 등록된 게시글이 없어요. 첫 소식을 남겨보세요!</p>'; return; }
-      postList.innerHTML = snap.docs.map(doc => {
-        const d = doc.data();
+  async function loadPosts() {
+    postList.innerHTML = '<p class="loading">불러오는 중…</p>';
+    try {
+      const docs = await window.FB.list('posts');
+      docs.sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+      document.getElementById('postCount').textContent = docs.length;
+      postsCache = {};
+      if (!docs.length) { postList.innerHTML = '<p class="empty">아직 등록된 게시글이 없어요. 첫 소식을 남겨보세요!</p>'; return; }
+      postList.innerHTML = docs.map(d => {
+        postsCache[d.id] = d;
         const meta = CATEGORIES[d.category] || { label: '소식', cls: 'cat-news' };
         const thumb = d.imageUrl
           ? `<img class="row-thumb" src="${esc(d.imageUrl)}" alt="" />`
@@ -217,15 +222,15 @@ if (!configReady) {
             <div class="rm-meta">${esc(fmtDate(d.date))}${d.link ? ' · 링크' : ''}${d.fileUrl ? ' · 첨부' : ''}</div>
           </div>
           <div class="row-actions">
-            <button class="mini-btn" onclick="__editPost('${doc.id}')">수정</button>
-            <button class="mini-btn danger" onclick="__deletePost('${doc.id}')">삭제</button>
+            <button class="mini-btn" onclick="__editPost('${d.id}')">수정</button>
+            <button class="mini-btn danger" onclick="__deletePost('${d.id}')">삭제</button>
           </div>
         </div>`;
       }).join('');
-    }, err => {
+    } catch (err) {
       console.error(err);
-      postList.innerHTML = '<p class="empty">목록을 불러오지 못했어요.</p>';
-    });
+      postList.innerHTML = '<p class="empty">목록을 불러오지 못했어요: ' + esc(err.message) + '</p>';
+    }
   }
 
   /* ══════════ 문의 관리 ══════════ */
@@ -241,18 +246,21 @@ if (!configReady) {
     });
   });
 
-  function startInquiries() {
-    db.collection('inquiries').orderBy('createdAt', 'desc').onSnapshot(snap => {
-      inqDocs = snap.docs.map(doc => ({ id: doc.id, d: doc.data() }));
+  async function loadInquiries() {
+    inqList.innerHTML = '<p class="loading">불러오는 중…</p>';
+    try {
+      const docs = await window.FB.list('inquiries', await authToken());
+      docs.sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+      inqDocs = docs.map(d => { const id = d.id; const dd = Object.assign({}, d); delete dd.id; return { id, d: dd }; });
       const newCount = inqDocs.filter(x => x.d.status !== 'answered').length;
       const badge = document.getElementById('newInqBadge');
       badge.textContent = newCount;
       badge.classList.toggle('zero', newCount === 0);
       renderInquiries();
-    }, err => {
+    } catch (err) {
       console.error(err);
-      inqList.innerHTML = '<p class="empty">문의를 불러오지 못했어요.</p>';
-    });
+      inqList.innerHTML = '<p class="empty">문의를 불러오지 못했어요: ' + esc(err.message) + '</p>';
+    }
   }
 
   function renderInquiries() {
@@ -287,23 +295,24 @@ if (!configReady) {
     }).join('');
   }
 
-  window.__saveReply = function (id) {
+  window.__saveReply = async function (id) {
     const reply = document.getElementById('reply-' + id).value.trim();
-    db.collection('inquiries').doc(id).update({
-      reply, status: 'answered',
-      answeredAt: firebase.firestore.FieldValue.serverTimestamp(),
-    }).then(() => showToast('답변을 저장하고 완료 처리했어요.'))
-      .catch(() => showToast('저장에 실패했어요.', true));
+    try {
+      await window.FB.update('inquiries', id, { reply, status: 'answered', answeredAt: window.FB.nowISO() }, await authToken());
+      showToast('답변을 저장하고 완료 처리했어요.'); loadInquiries();
+    } catch (e) { showToast('저장에 실패했어요: ' + e.message, true); }
   };
-  window.__reopen = function (id) {
-    db.collection('inquiries').doc(id).update({ status: 'received' })
-      .then(() => showToast('확인 대기 상태로 되돌렸어요.'))
-      .catch(() => showToast('처리에 실패했어요.', true));
+  window.__reopen = async function (id) {
+    try {
+      await window.FB.update('inquiries', id, { status: 'received' }, await authToken());
+      showToast('확인 대기 상태로 되돌렸어요.'); loadInquiries();
+    } catch (e) { showToast('처리에 실패했어요: ' + e.message, true); }
   };
-  window.__deleteInq = function (id) {
+  window.__deleteInq = async function (id) {
     if (!confirm('이 문의를 삭제할까요? 되돌릴 수 없어요.')) return;
-    db.collection('inquiries').doc(id).delete()
-      .then(() => showToast('문의를 삭제했어요.'))
-      .catch(() => showToast('삭제에 실패했어요.', true));
+    try {
+      await window.FB.remove('inquiries', id, await authToken());
+      showToast('문의를 삭제했어요.'); loadInquiries();
+    } catch (e) { showToast('삭제에 실패했어요: ' + e.message, true); }
   };
 }

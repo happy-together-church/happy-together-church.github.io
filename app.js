@@ -73,24 +73,11 @@ function catMeta(c) { return CATEGORIES[c] || { label: '소식', cls: 'cat-news'
   setTimeout(() => reveals.forEach(el => el.classList.add('in')), 2500);
 })();
 
-/* ---------- Firebase ---------- */
-let db = null, auth = null;
-(function initFirebase() {
-  if (typeof FIREBASE_CONFIG === 'undefined' || FIREBASE_CONFIG.apiKey === 'YOUR_API_KEY') {
-    console.warn('[더불어행복한교회] firebase-config.js 설정이 필요합니다. (README 참고)');
-    renderConfigNeeded();
-    return;
-  }
-  try {
-    if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
-    db = firebase.firestore();
-    // 일부 네트워크/브라우저에서 기본 연결이 멈추는 문제 방지 (long-polling 강제)
-    try { db.settings({ experimentalForceLongPolling: true }); } catch (e) {}
-    auth = firebase.auth();
-  } catch (err) {
-    console.error('Firebase 초기화 오류:', err);
-  }
-})();
+/* ---------- 데이터 통신: Firestore REST(fb-rest.js의 window.FB) ----------
+   실시간 SDK 연결이 일부 환경에서 멈추는 문제를 피하려고 일반 HTTPS(REST) 사용 */
+if (typeof FIREBASE_CONFIG === 'undefined' || FIREBASE_CONFIG.apiKey === 'YOUR_API_KEY' || !window.FB) {
+  console.warn('[더불어행복한교회] firebase-config.js 설정이 필요합니다. (README 참고)');
+}
 
 /* ---------- Google Analytics 4 (방문 통계) ---------- */
 function gaEvent(name, params) { try { if (window.gtag) window.gtag('event', name, params || {}); } catch (e) {} }
@@ -143,13 +130,14 @@ function indexPosts(items) { items.forEach(x => { POSTS_INDEX[x.id] = x.d; }); }
 function subscribePosts(onData) {
   const seed = getSeedPosts().map(d => ({ id: d.id, d }));
   onData(seed); // 즉시 기본 칼럼 표시 (연결이 늦어도 화면이 비지 않음)
-  if (!db) return;
-  try {
-    db.collection('posts').orderBy('createdAt', 'desc').onSnapshot(
-      (snap) => onData(snap.docs.map(doc => ({ id: doc.id, d: doc.data() })).concat(seed)),
-      (err) => console.error('posts onSnapshot:', err && (err.code || err.message))
-    );
-  } catch (e) { console.error(e); }
+  if (!window.FB) return;
+  window.FB.list('posts')
+    .then(docs => {
+      const fs = docs.map(o => { const { id } = o; const d = Object.assign({}, o); delete d.id; return { id, d }; });
+      fs.sort((a, b) => String(b.d.createdAt || '').localeCompare(String(a.d.createdAt || '')));
+      onData(fs.concat(seed)); // 관리자 글(최신순) + 기본 칼럼
+    })
+    .catch(err => console.error('posts 불러오기 실패:', err.message));
 }
 
 /* ---------- 홈: 최근 게시글 3개 ---------- */
@@ -300,7 +288,7 @@ document.addEventListener('keydown', (e) => {
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    if (!db) { showToast('아직 문의 접수 준비가 끝나지 않았어요. 잠시 후 다시 시도해 주세요.', true); return; }
+    if (!window.FB) { showToast('아직 문의 접수 준비가 끝나지 않았어요. 잠시 후 다시 시도해 주세요.', true); return; }
 
     const type = (form.querySelector('input[name="type"]:checked') || {}).value || '기타 문의';
     const name = form.name.value.trim();
@@ -313,11 +301,11 @@ document.addEventListener('keydown', (e) => {
     submitBtn.disabled = true;
     submitBtn.textContent = '보내는 중…';
     try {
-      const ref = await db.collection('inquiries').add({
+      const ref = await window.FB.create('inquiries', {
         type, name, contact, message,
         status: 'received',   // received → answered
         reply: '',
-        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        createdAt: window.FB.nowISO(),
       });
       sendInquiryEmail({ type, name, contact, message, ref: ref.id });
       gaEvent('inquiry_submit', { inquiry_type: type });
@@ -354,12 +342,11 @@ document.addEventListener('keydown', (e) => {
   if (btn) btn.addEventListener('click', async () => {
     const code = (input.value || '').trim();
     if (!code) { showToast('조회번호를 입력해 주세요.', true); return; }
-    if (!db) { showToast('조회 준비가 끝나지 않았어요.', true); return; }
+    if (!window.FB) { showToast('조회 준비가 끝나지 않았어요.', true); return; }
     result.innerHTML = '<p style="color:var(--ink-faint); font-size:14px;">확인 중이에요…</p>';
     try {
-      const doc = await db.collection('inquiries').doc(code).get();
-      if (!doc.exists) { result.innerHTML = '<p style="color:var(--red); font-size:14px;">해당 조회번호를 찾을 수 없어요. 번호를 다시 확인해 주세요.</p>'; return; }
-      const d = doc.data();
+      const d = await window.FB.get('inquiries', code);
+      if (!d) { result.innerHTML = '<p style="color:var(--red); font-size:14px;">해당 조회번호를 찾을 수 없어요. 번호를 다시 확인해 주세요.</p>'; return; }
       if (d.status === 'answered' && d.reply) {
         result.innerHTML = `<div class="lookup-answer">
           <div class="la-status">답변이 도착했어요</div>
